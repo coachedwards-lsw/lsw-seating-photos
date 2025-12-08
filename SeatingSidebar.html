@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 12px;
+        font-size: 13px;
+      }
+      h2 {
+        font-size: 16px;
+        margin-top: 0;
+      }
+      .counter-container {
+        margin: 8px 0 12px 0;
+        padding: 8px;
+        border-radius: 6px;
+        background: #fff7cc;
+        border: 1px solid #f0c36d;
+        text-align: center;
+      }
+      .counter-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #666;
+      }
+      .counter-value {
+        font-size: 28px;
+        font-weight: bold;
+        color: #b36b00;
+      }
+      .section-title {
+        font-weight: bold;
+        margin-top: 10px;
+        margin-bottom: 4px;
+      }
+      .view-toggle {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 8px;
+      }
+      .view-label {
+        font-size: 12px;
+        color: #444;
+      }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 4px 0;
+      }
+      button {
+        margin-top: 4px;
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+      .full-width-btn {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .generate-section {
+        margin-top: 14px;
+      }
+      #status {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #555;
+        white-space: pre-line;
+      }
+      .note {
+        font-size: 11px;
+        color: #777;
+        margin-top: 4px;
+      }
+      hr {
+        margin: 12px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Seating Options</h2>
+
+    <!-- Generation Counter -->
+    <div class="counter-container">
+      <div class="counter-label">Generations this session</div>
+      <div class="counter-value" id="genCount">0</div>
+    </div>
+
+    <div class="section-title">View Mode</div>
+
+    <div class="view-toggle">
+      <div class="view-label">
+        Current view:
+        <span id="currentViewLabel">Teacher</span>
+      </div>
+      <button id="toggleViewBtn" class="full-width-btn" onclick="toggleView()">
+        Switch to Student View
+      </button>
+    </div>
+
+    <div class="note">
+      Clicking the button immediately switches between Teacher and Student seating chart views.
+    </div>
+
+    <hr>
+
+    <div class="section-title">Generation Options</div>
+
+    <label>
+      <input type="checkbox" id="oldPods" checked>
+      <span>Avoid old podmates when possible</span>
+    </label>
+
+    <div class="note">
+      Checked: tries to <b>break up current pods</b> and avoid old podmates.<br>
+      Unchecked: ignores old pods; only friend + location preferences matter.
+    </div>
+
+    <div class="generate-section">
+      <button class="full-width-btn" onclick="runGenerate()">
+        Generate New Seating
+      </button>
+    </div>
+
+    <div id="status"></div>
+
+    <script>
+      let generationCount = 0;
+      let currentView = 'teacher'; // default when sidebar opens
+
+      function updateCounter() {
+        document.getElementById('genCount').textContent = generationCount;
+      }
+
+      function updateViewUI() {
+        const label = document.getElementById('currentViewLabel');
+        const btn = document.getElementById('toggleViewBtn');
+
+        if (currentView === 'teacher') {
+          label.textContent = 'Teacher';
+          btn.textContent = 'Switch to Student View';
+        } else {
+          label.textContent = 'Student';
+          btn.textContent = 'Switch to Teacher View';
+        }
+      }
+
+      function setStatus(msg) {
+        document.getElementById('status').textContent = msg;
+      }
+
+      function toggleView() {
+        if (currentView === 'teacher') {
+          google.script.run.openStudentViewSheet();
+          currentView = 'student';
+        } else {
+          google.script.run.openTeacherViewSheet();
+          currentView = 'teacher';
+        }
+        updateViewUI();
+      }
+
+      function runGenerate() {
+        const useOldPods = document.getElementById('oldPods').checked;
+
+        setStatus('Generating new seating...');
+
+        google.script.run
+          .withSuccessHandler(function () {
+            generationCount++;
+            updateCounter();
+            setStatus(
+              'New seating generated.'
+              + (useOldPods
+                  ? ' (Old pods penalized.)'
+                  : ' (Old pods ignored.)')
+            );
+          })
+          .withFailureHandler(function (err) {
+            setStatus('Error: ' + err.message);
+          })
+          .generateNewSeating(useOldPods);
+      }
+
+      // Initialize UI on load
+      updateCounter();
+      updateViewUI();
+    </script>
+  </body>
+</html>
